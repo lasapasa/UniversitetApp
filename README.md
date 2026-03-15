@@ -35,6 +35,12 @@ dotnet build UniversitetApp.sln
 dotnet run --project UniversitetApp/UniversitetApp.csproj
 ```
 
+Evt. hvis du er i UniversitetApp-mappa:
+```bash
+dotnet build
+dotnet run
+```
+
 ## Menyvalg i appen
 
 - [1] Opprett kurs
