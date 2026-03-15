@@ -1,0 +1,22 @@
+# Build output
+**/bin/
+**/obj/
+
+# Visual Studio / VS Code
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# .NET tool and test artifacts
+*.cache
+TestResults/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local runtime data
+UniversitetApp/data.json
