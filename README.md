@@ -31,7 +31,7 @@ dotnet --version
 Fra prosjektroten:
 
 ```bash
-dotnet build UniversitetApp-2.sln
+dotnet build UniversitetApp.sln
 dotnet run --project UniversitetApp/UniversitetApp.csproj
 ```
 
