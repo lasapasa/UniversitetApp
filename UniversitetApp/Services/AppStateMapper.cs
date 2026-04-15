@@ -370,8 +370,10 @@ internal sealed class PersistedAppState
     public List<BokDto> Boker { get; set; } = new();
 
     [JsonPropertyName("Bøker")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<BokDto>? BoekerLegacy
     {
+        get => null;
         set => Boker = value ?? new List<BokDto>();
     }
 
@@ -379,8 +381,10 @@ internal sealed class PersistedAppState
     public List<LaanDto> Laan { get; set; } = new();
 
     [JsonPropertyName("Lån")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<LaanDto>? LaanLegacy
     {
+        get => null;
         set => Laan = value ?? new List<LaanDto>();
     }
 
@@ -431,9 +435,17 @@ internal sealed class BokDto
     public int Ar { get; set; }
 
     [JsonPropertyName("År")]
-    public int AarLegacy
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? AarLegacy
     {
-        set => Ar = value;
+        get => null;
+        set
+        {
+            if (value.HasValue)
+            {
+                Ar = value.Value;
+            }
+        }
     }
 
     public int AntallEksemplarer { get; set; }
