@@ -6,6 +6,7 @@ namespace UniversitetApp.Services;
 public class KursManager
 {
     private readonly List<Kurs> _kurs = new();
+    private readonly Dictionary<string, Kurs> _kursByKode = new(StringComparer.OrdinalIgnoreCase);
 
     public IReadOnlyList<Kurs> HentAlleKurs() => _kurs;
 
@@ -30,7 +31,8 @@ public class KursManager
             return OperationResult.Failure("Studiepoeng og maks plasser må være større enn 0.", "validation_error");
         }
 
-        if (_kurs.Any(k => k.KursKode.Equals(kode, StringComparison.OrdinalIgnoreCase)))
+        string normalisertKode = NormaliserKursKode(kode);
+        if (_kursByKode.ContainsKey(normalisertKode))
         {
             return OperationResult.Failure($"Kurs med kode '{kode}' finnes allerede.", "duplicate_course_code");
         }
@@ -42,7 +44,8 @@ public class KursManager
 
         try
         {
-            _kurs.Add(new Kurs(kode, navn, studiepoeng, maksPlasser, lærerAnsattID));
+            var nyttKurs = new Kurs(kode, navn, studiepoeng, maksPlasser, lærerAnsattID);
+            LeggTilKursInternt(nyttKurs);
             return OperationResult.Success($"Kurs opprettet: {kode} - {navn}");
         }
         catch (ArgumentException ex)
@@ -165,7 +168,12 @@ public class KursManager
 
     public List<Kurs> HentKursForStudent(string studentID)
     {
-        return _kurs.Where(k => k.DeltakerIDs.Contains(studentID, StringComparer.OrdinalIgnoreCase)).ToList();
+        var query =
+            from kurs in _kurs
+            where kurs.DeltakerIDs.Contains(studentID, StringComparer.OrdinalIgnoreCase)
+            select kurs;
+
+        return query.ToList();
     }
 
     public List<Kurs> HentKursForLærer(string ansattID)
@@ -175,7 +183,7 @@ public class KursManager
 
     public string HentKarakter(Student student, string kursKode)
     {
-        var kurs = _kurs.FirstOrDefault(k => k.KursKode.Equals(kursKode, StringComparison.OrdinalIgnoreCase));
+        var kurs = FinnKurs(kursKode, out _);
         if (kurs == null) return "Kurs ikke funnet.";
 
         if (!kurs.DeltakerIDs.Contains(student.StudentID, StringComparer.OrdinalIgnoreCase))
@@ -186,19 +194,55 @@ public class KursManager
             : "Ikke satt";
     }
 
+    public void LastInnKurs(IEnumerable<Kurs> kursListe)
+    {
+        _kurs.Clear();
+        _kursByKode.Clear();
+
+        foreach (var kurs in kursListe)
+        {
+            string kode = NormaliserKursKode(kurs.KursKode);
+            if (_kursByKode.ContainsKey(kode))
+            {
+                continue;
+            }
+
+            LeggTilKursInternt(kurs);
+        }
+    }
+
     private Kurs? FinnKurs(string kursKode, out string feil)
     {
         feil = string.Empty;
-        var kurs = _kurs.FirstOrDefault(k => k.KursKode.Equals(kursKode, StringComparison.OrdinalIgnoreCase));
+        if (string.IsNullOrWhiteSpace(kursKode))
+        {
+            feil = "Kurskode kan ikke være tom.";
+            return null;
+        }
+
+        string normalisertKode = NormaliserKursKode(kursKode);
+        _kursByKode.TryGetValue(normalisertKode, out var kurs);
         if (kurs == null)
             feil = $"Fant ikke kurs med kode '{kursKode}'.";
         return kurs;
     }
 
+    private void LeggTilKursInternt(Kurs kurs)
+    {
+        _kurs.Add(kurs);
+        _kursByKode[NormaliserKursKode(kurs.KursKode)] = kurs;
+    }
+
+    private static string NormaliserKursKode(string kursKode)
+    {
+        return kursKode.Trim().ToUpperInvariant();
+    }
+
     private static bool ErGyldigKarakter(string karakter)
     {
         string[] gyldige = ["A", "B", "C", "D", "E", "F"];
-        return gyldige.Contains((karakter ?? string.Empty).Trim().ToUpperInvariant());
+        string karakterVerdi = (karakter ?? string.Empty).Trim().ToUpperInvariant();
+        return Array.Exists(gyldige, k => k == karakterVerdi);
     }
 
 }

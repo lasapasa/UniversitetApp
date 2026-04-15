@@ -1,60 +1,59 @@
 # UniversitetApp
 
-Et konsollbasert universitetssystem i C# (.NET 8) for enkel håndtering av kurs, brukere og bibliotek.
+UniversitetApp er en konsollapplikasjon i C# (.NET 10) som simulerer et enkelt universitetssystem.
+Systemet håndterer innlogging, kursadministrasjon og bibliotekfunksjoner for ulike brukerroller.
 
-## Innhold
+## Hva prosjektet gjør
 
-- Kurs: opprett kurs, meld student til kurs, vis kurs og deltakere, søk etter kurs
-- Bibliotek: registrer bok, lån ut bok, returner bok, søk etter bok
-- Brukertyper: student, utvekslingsstudent, ansatt
+Applikasjonen lar brukere logge inn eller registrere seg, og viser deretter en meny basert på rolle.
 
-## Prosjektstruktur
+- Studenter kan melde seg på og av kurs, se egne kurs og karakterer, samt søke, låne og returnere bøker.
+- Faglærere kan opprette kurs, sette karakterer i egne kurs og registrere pensum.
+- Bibliotekansatte kan registrere bøker og se aktive lån og historikk.
 
-- UniversitetApp-2.sln: solution-fil
-- UniversitetApp/: selve app-prosjektet
-  - Program.cs: meny og applikasjonsflyt
-  - Models/: domeneobjekter (Student, Kurs, Bok, osv.)
-  - Services/: forretningslogikk (KursManager, BibliotekManager)
+## Hvordan prosjektet er bygget
 
-## Krav
+Prosjektet er delt i tydelige lag:
 
-- .NET SDK 8.0+
+- Console: menyer og brukerflyt.
+- Models: domenemodeller for brukere, kurs, bøker og lån.
+- Services: forretningslogikk for autentisering, kurs og bibliotek.
+- Common: felles responsmodell for suksess/feil.
 
-Sjekk versjon:
+Arkitekturen gjør det enklere å holde UI, domene og logikk adskilt.
 
-```bash
-dotnet --version
-```
+## Data og lagring
 
-## Bygg og kjør
+Systemet bruker data.json for enkel persistens.
 
-Fra prosjektroten:
+- Ved oppstart forsøker appen å laste data fra fil.
+- Hvis fil ikke finnes eller ikke kan leses, brukes eksempeldata.
+- Ved avslutning lagres oppdatert tilstand tilbake til fil.
+
+## Kjøring av prosjektet
+
+Krav: .NET SDK 10.0 eller nyere.
+
+Bygg og kjør fra prosjektrot:
 
 ```bash
 dotnet build UniversitetApp.sln
 dotnet run --project UniversitetApp/UniversitetApp.csproj
 ```
 
-Evt. hvis du er i UniversitetApp-mappa:
+## Tester
+
+Prosjektet inneholder et eget testprosjekt med enhetstester for sentrale regler.
+
+Kjør tester:
+
 ```bash
-dotnet build
-dotnet run
+dotnet test UniversitetApp.sln
 ```
 
-## Menyvalg i appen
+## Eksempelbrukere
 
-- [1] Opprett kurs
-- [2] Meld student til kurs
-- [3] Print kurs og deltakere
-- [4] Søk på kurs
-- [5] Søk på bok
-- [6] Lån bok
-- [7] Returner bok
-- [8] Registrer bok
-- [0] Avslutt
-
-## Notater
-
-- Appen starter med seed-data ved oppstart.
-- Input valideres i manager- og modell-lag.
-- Modellene bruker innkapsling for tryggere oppdatering av intern tilstand.
+- Student: kari / pass123
+- Student: ola / pass123
+- Faglærer: larsen / pass123
+- Bibliotekansatt: maja / pass123

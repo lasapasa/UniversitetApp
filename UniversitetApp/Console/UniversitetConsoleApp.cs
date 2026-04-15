@@ -8,6 +8,7 @@ public class UniversitetConsoleApp
     private readonly KursManager _kursManager = new();
     private readonly BibliotekManager _bibliotekManager = new();
     private readonly AuthService _authService = new();
+    private readonly string _dataFilsti;
 
     private readonly AuthFlow _authFlow;
     private readonly StudentMenu _studentMenu;
@@ -16,7 +17,27 @@ public class UniversitetConsoleApp
 
     public UniversitetConsoleApp()
     {
-        SeedDataInitializer.Initialize(_kursManager, _bibliotekManager, _authService, out var studenter, out var ansatte);
+        _dataFilsti = FinnDataFilsti();
+        var lastResult = AppStateStore.LastInn(_dataFilsti);
+
+        List<Student> studenter;
+        List<Ansatt> ansatte;
+        if (lastResult.IsSuccess && lastResult.Data != null)
+        {
+            var data = lastResult.Data;
+            studenter = data.Studenter;
+            ansatte = data.Ansatte;
+            _kursManager.LastInnKurs(data.Kurs);
+            _bibliotekManager.LastInnData(data.Boker, data.LaanHistorikk);
+            _authService.LastInnKontoer(data.Accounts);
+            Console.WriteLine($"[Lastet data fra {_dataFilsti}]");
+        }
+        else
+        {
+            SeedDataInitializer.Initialize(_kursManager, _bibliotekManager, _authService, out studenter, out ansatte);
+            Console.WriteLine("[Bruker eksempeldata for denne økten]");
+        }
+
         _authFlow = new AuthFlow(_authService, studenter, ansatte);
         _studentMenu = new StudentMenu(_kursManager, _bibliotekManager);
         _faglaererMenu = new FaglaererMenu(_kursManager, _bibliotekManager, studenter);
@@ -46,6 +67,7 @@ public class UniversitetConsoleApp
                         _authFlow.RegistrerNyBruker();
                         break;
                     case "0":
+                        LagreDataTilFil();
                         kjør = false;
                         Console.WriteLine("Ha det bra.");
                         break;
@@ -98,5 +120,40 @@ public class UniversitetConsoleApp
         }
 
         Console.WriteLine("Ukjent rolle.");
+    }
+
+    private void LagreDataTilFil()
+    {
+        var snapshot = new AppStateSnapshot(
+            _authFlow.Studenter.ToList(),
+            _authFlow.Ansatte.ToList(),
+            _kursManager.HentAlleKurs().ToList(),
+            _bibliotekManager.HentAlleBøker().ToList(),
+            _bibliotekManager.HentHistorikk(),
+            _authService.Accounts.ToList());
+
+        var lagreResult = AppStateStore.Lagre(_dataFilsti, snapshot);
+        if (!lagreResult.IsSuccess)
+        {
+            Console.WriteLine($"Advarsel: {lagreResult.Message}");
+        }
+    }
+
+    private static string FinnDataFilsti()
+    {
+        string nåværendeMappe = Directory.GetCurrentDirectory();
+        string filINåværendeMappe = Path.Combine(nåværendeMappe, "data.json");
+        if (File.Exists(filINåværendeMappe))
+        {
+            return filINåværendeMappe;
+        }
+
+        string filIProsjektMappe = Path.Combine(nåværendeMappe, "UniversitetApp", "data.json");
+        if (File.Exists(filIProsjektMappe) || Directory.Exists(Path.Combine(nåværendeMappe, "UniversitetApp")))
+        {
+            return filIProsjektMappe;
+        }
+
+        return filINåværendeMappe;
     }
 }

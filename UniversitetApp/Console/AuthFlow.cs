@@ -8,12 +8,19 @@ public class AuthFlow
     private readonly AuthService _authService;
     private readonly List<Student> _studenter;
     private readonly List<Ansatt> _ansatte;
+    private readonly Dictionary<string, Student> _studenterById;
+    private readonly Dictionary<string, Ansatt> _ansatteById;
+
+    public IReadOnlyList<Student> Studenter => _studenter;
+    public IReadOnlyList<Ansatt> Ansatte => _ansatte;
 
     public AuthFlow(AuthService authService, List<Student> studenter, List<Ansatt> ansatte)
     {
         _authService = authService;
         _studenter = studenter;
         _ansatte = ansatte;
+        _studenterById = ByggStudentIndeks(_studenter);
+        _ansatteById = ByggAnsattIndeks(_ansatte);
     }
 
     public bool TryLogin(out UserAccount? account)
@@ -54,29 +61,15 @@ public class AuthFlow
                 string navn = InputHelper.LesIkkeTom("Navn: ");
                 string epost = InputHelper.LesIkkeTom("Epost: ");
 
-                if (_studenter.Any(s => s.StudentID.Equals(id, StringComparison.OrdinalIgnoreCase)))
+                var result = _authService.RegisterStudent(username, password, id, navn, epost, _studenter);
+                if (!result.IsSuccess || result.Data == null)
                 {
-                    Console.WriteLine("StudentID finnes allerede.");
+                    Console.WriteLine(result.Message);
                     return;
                 }
 
-                try
-                {
-                    var student = new Student(id, navn, epost);
-                    var registerResult = _authService.Register(username, password, AppRole.Student, student.StudentID);
-                    if (!registerResult.IsSuccess)
-                    {
-                        Console.WriteLine(registerResult.Message);
-                        return;
-                    }
-
-                    _studenter.Add(student);
-                    Console.WriteLine("Ny student registrert.");
-                }
-                catch (ArgumentException ex)
-                {
-                    Console.WriteLine($"Ugyldig input: {ex.Message}");
-                }
+                _studenterById[result.Data.StudentID] = result.Data;
+                Console.WriteLine(result.Message);
 
                 break;
             }
@@ -87,29 +80,25 @@ public class AuthFlow
                 string epost = InputHelper.LesIkkeTom("Epost: ");
                 string avdeling = InputHelper.LesIkkeTom("Avdeling: ");
 
-                if (_ansatte.Any(a => a.AnsattID.Equals(id, StringComparison.OrdinalIgnoreCase)))
+                var result = _authService.RegisterAnsatt(
+                    username,
+                    password,
+                    id,
+                    navn,
+                    epost,
+                    avdeling,
+                    StillingType.Foreleser,
+                    AppRole.Faglærer,
+                    _ansatte);
+
+                if (!result.IsSuccess || result.Data == null)
                 {
-                    Console.WriteLine("AnsattID finnes allerede.");
+                    Console.WriteLine(result.Message);
                     return;
                 }
 
-                try
-                {
-                    var ansatt = new Ansatt(id, navn, epost, StillingType.Foreleser, avdeling);
-                    var registerResult = _authService.Register(username, password, AppRole.Faglærer, ansatt.AnsattID);
-                    if (!registerResult.IsSuccess)
-                    {
-                        Console.WriteLine(registerResult.Message);
-                        return;
-                    }
-
-                    _ansatte.Add(ansatt);
-                    Console.WriteLine("Ny faglærer registrert.");
-                }
-                catch (ArgumentException ex)
-                {
-                    Console.WriteLine($"Ugyldig input: {ex.Message}");
-                }
+                _ansatteById[result.Data.AnsattID] = result.Data;
+                Console.WriteLine(result.Message);
 
                 break;
             }
@@ -120,29 +109,25 @@ public class AuthFlow
                 string epost = InputHelper.LesIkkeTom("Epost: ");
                 string avdeling = InputHelper.LesIkkeTom("Avdeling: ");
 
-                if (_ansatte.Any(a => a.AnsattID.Equals(id, StringComparison.OrdinalIgnoreCase)))
+                var result = _authService.RegisterAnsatt(
+                    username,
+                    password,
+                    id,
+                    navn,
+                    epost,
+                    avdeling,
+                    StillingType.Bibliotekar,
+                    AppRole.BibliotekAnsatt,
+                    _ansatte);
+
+                if (!result.IsSuccess || result.Data == null)
                 {
-                    Console.WriteLine("AnsattID finnes allerede.");
+                    Console.WriteLine(result.Message);
                     return;
                 }
 
-                try
-                {
-                    var ansatt = new Ansatt(id, navn, epost, StillingType.Bibliotekar, avdeling);
-                    var registerResult = _authService.Register(username, password, AppRole.BibliotekAnsatt, ansatt.AnsattID);
-                    if (!registerResult.IsSuccess)
-                    {
-                        Console.WriteLine(registerResult.Message);
-                        return;
-                    }
-
-                    _ansatte.Add(ansatt);
-                    Console.WriteLine("Ny bibliotekansatt registrert.");
-                }
-                catch (ArgumentException ex)
-                {
-                    Console.WriteLine($"Ugyldig input: {ex.Message}");
-                }
+                _ansatteById[result.Data.AnsattID] = result.Data;
+                Console.WriteLine(result.Message);
 
                 break;
             }
@@ -154,11 +139,41 @@ public class AuthFlow
 
     public Student? FinnStudentForAccount(UserAccount account)
     {
-        return _studenter.FirstOrDefault(s => s.StudentID.Equals(account.ReferenceId, StringComparison.OrdinalIgnoreCase));
+        _studenterById.TryGetValue(account.ReferenceId, out var student);
+        return student;
     }
 
     public Ansatt? FinnAnsattForAccount(UserAccount account)
     {
-        return _ansatte.FirstOrDefault(a => a.AnsattID.Equals(account.ReferenceId, StringComparison.OrdinalIgnoreCase));
+        _ansatteById.TryGetValue(account.ReferenceId, out var ansatt);
+        return ansatt;
+    }
+
+    private static Dictionary<string, Student> ByggStudentIndeks(IEnumerable<Student> studenter)
+    {
+        var indeks = new Dictionary<string, Student>(StringComparer.OrdinalIgnoreCase);
+        foreach (var student in studenter)
+        {
+            if (!indeks.ContainsKey(student.StudentID))
+            {
+                indeks[student.StudentID] = student;
+            }
+        }
+
+        return indeks;
+    }
+
+    private static Dictionary<string, Ansatt> ByggAnsattIndeks(IEnumerable<Ansatt> ansatte)
+    {
+        var indeks = new Dictionary<string, Ansatt>(StringComparer.OrdinalIgnoreCase);
+        foreach (var ansatt in ansatte)
+        {
+            if (!indeks.ContainsKey(ansatt.AnsattID))
+            {
+                indeks[ansatt.AnsattID] = ansatt;
+            }
+        }
+
+        return indeks;
     }
 }

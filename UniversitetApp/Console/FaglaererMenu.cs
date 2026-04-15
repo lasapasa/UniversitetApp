@@ -8,12 +8,15 @@ public class FaglaererMenu
     private readonly KursManager _kursManager;
     private readonly BibliotekManager _bibliotekManager;
     private readonly List<Student> _studenter;
+    private readonly Dictionary<string, Student> _studenterById = new(StringComparer.OrdinalIgnoreCase);
+    private int _studentAntallVedSisteIndeks;
 
     public FaglaererMenu(KursManager kursManager, BibliotekManager bibliotekManager, List<Student> studenter)
     {
         _kursManager = kursManager;
         _bibliotekManager = bibliotekManager;
         _studenter = studenter;
+        OppdaterStudentIndeksHvisNødvendig();
     }
 
     public void Run(Ansatt lærer)
@@ -76,7 +79,8 @@ public class FaglaererMenu
                     {
                         string kursKode = InputHelper.LesIkkeTom("Kurskode: ");
                         string studentID = InputHelper.LesIkkeTom("StudentID: ");
-                        if (!_studenter.Any(s => s.StudentID.Equals(studentID, StringComparison.OrdinalIgnoreCase)))
+                        OppdaterStudentIndeksHvisNødvendig();
+                        if (!_studenterById.ContainsKey(studentID.Trim()))
                         {
                             Console.WriteLine("Feil: Student finnes ikke.");
                             break;
@@ -139,5 +143,21 @@ public class FaglaererMenu
         }
 
         foreach (var b in treff) Console.WriteLine($"- {b}");
+    }
+
+    private void OppdaterStudentIndeksHvisNødvendig()
+    {
+        if (_studentAntallVedSisteIndeks == _studenter.Count)
+        {
+            return;
+        }
+
+        _studenterById.Clear();
+        foreach (var student in _studenter)
+        {
+            _studenterById[student.StudentID] = student;
+        }
+
+        _studentAntallVedSisteIndeks = _studenter.Count;
     }
 }

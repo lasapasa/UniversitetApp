@@ -4,7 +4,5 @@ namespace UniversitetApp.Models;
 public enum StillingType
 {
     Foreleser,
-    Assistent,
-    Bibliotekar,
-    Administrator
+    Bibliotekar
 }

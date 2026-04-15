@@ -6,6 +6,7 @@ namespace UniversitetApp.Services;
 public class BibliotekManager
 {
     private readonly List<Bok> _bøker = new();
+    private readonly Dictionary<string, Bok> _bøkerById = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<Laan> _lånHistorikk = new();
 
     public IReadOnlyList<Bok> HentAlleBøker() => _bøker;
@@ -40,14 +41,16 @@ public class BibliotekManager
             return OperationResult.Failure("Antall eksemplarer må være større enn 0.", "validation_error");
         }
 
-        if (_bøker.Any(b => b.MediaID.Equals(mediaID, StringComparison.OrdinalIgnoreCase)))
+        string normalisertMediaId = NormaliserMediaId(mediaID);
+        if (_bøkerById.ContainsKey(normalisertMediaId))
         {
             return OperationResult.Failure($"Bok med ID '{mediaID}' finnes allerede.", "duplicate_media_id");
         }
 
         try
         {
-            _bøker.Add(new Bok(mediaID, tittel, forfatter, år, antallEksemplarer));
+            var bok = new Bok(mediaID, tittel, forfatter, år, antallEksemplarer);
+            LeggTilBokInternt(bok);
             return OperationResult.Success($"Bok registrert: \"{tittel}\" av {forfatter}");
         }
         catch (ArgumentException ex)
@@ -102,56 +105,50 @@ public class BibliotekManager
         return OperationResult.Success($"{bruker.Navn} har returnert \"{aktivtLån.Bok.Tittel}\".");
     }
 
-    public void VisAktiveLån()
-    {
-        var aktive = HentAktiveLån();
-
-        if (aktive.Count == 0)
-        {
-            Console.WriteLine("Ingen aktive lån.");
-            return;
-        }
-
-        Console.WriteLine($"\nAktive lån ({aktive.Count}):");
-        foreach (var lån in aktive)
-            Console.WriteLine($"  {lån}");
-    }
-
-    public void VisHistorikk()
-    {
-        if (_lånHistorikk.Count == 0)
-        {
-            Console.WriteLine("Ingen lånhistorikk.");
-            return;
-        }
-
-        Console.WriteLine($"\nLånhistorikk ({_lånHistorikk.Count} totalt):");
-        foreach (var lån in _lånHistorikk)
-            Console.WriteLine($"  {lån}");
-    }
-
-    public void SøkEtterBok(string søkeord)
-    {
-        var treff = FinnBøker(søkeord);
-
-        if (treff.Count == 0)
-        {
-            Console.WriteLine($"Ingen bøker funnet for '{søkeord}'.");
-            return;
-        }
-
-        Console.WriteLine($"Fant {treff.Count} bok(er):");
-        foreach (var bok in treff)
-            Console.WriteLine($"  {bok}");
-    }
-
     private Bok? FinnBok(string mediaID, out string feil)
     {
         feil = string.Empty;
-        var bok = _bøker.FirstOrDefault(b => b.MediaID.Equals(mediaID, StringComparison.OrdinalIgnoreCase));
+        if (string.IsNullOrWhiteSpace(mediaID))
+        {
+            feil = "Bok-ID kan ikke være tom.";
+            return null;
+        }
+
+        _bøkerById.TryGetValue(NormaliserMediaId(mediaID), out var bok);
         if (bok == null)
             feil = $"Fant ikke bok med ID '{mediaID}'.";
         return bok;
+    }
+
+    public void LastInnData(IEnumerable<Bok> bøker, IEnumerable<Laan> lånHistorikk)
+    {
+        _bøker.Clear();
+        _bøkerById.Clear();
+        _lånHistorikk.Clear();
+
+        foreach (var bok in bøker)
+        {
+            string mediaId = NormaliserMediaId(bok.MediaID);
+            if (_bøkerById.ContainsKey(mediaId))
+            {
+                continue;
+            }
+
+            LeggTilBokInternt(bok);
+        }
+
+        _lånHistorikk.AddRange(lånHistorikk);
+    }
+
+    private void LeggTilBokInternt(Bok bok)
+    {
+        _bøker.Add(bok);
+        _bøkerById[NormaliserMediaId(bok.MediaID)] = bok;
+    }
+
+    private static string NormaliserMediaId(string mediaID)
+    {
+        return mediaID.Trim().ToUpperInvariant();
     }
 
 }
