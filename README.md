@@ -1,59 +1,66 @@
 # UniversitetApp
 
-UniversitetApp er en konsollapplikasjon i C# (.NET 10) som simulerer et enkelt universitetssystem.
-Systemet håndterer innlogging, kursadministrasjon og bibliotekfunksjoner for ulike brukerroller.
+Et konsollbasert universitetssystem i C# (.NET 10) for håndtering av innlogging, kurs, brukere og bibliotek.
 
-## Hva prosjektet gjør
+## Innhold
 
-Applikasjonen lar brukere logge inn eller registrere seg, og viser deretter en meny basert på rolle.
+- **Autentisering:** logg inn eller registrer ny bruker med rolle
+- **Kurs:** opprett kurs, meld student på/av kurs, sett karakter, vis deltakere
+- **Bibliotek:** registrer bok, lån ut bok, returner bok, søk etter bok
+- **Brukertyper:** student, faglærer, bibliotekansatt
 
-- Studenter kan melde seg på og av kurs, se egne kurs og karakterer, samt søke, låne og returnere bøker.
-- Faglærere kan opprette kurs, sette karakterer i egne kurs og registrere pensum.
-- Bibliotekansatte kan registrere bøker og se aktive lån og historikk.
+## Prosjektstruktur
 
-## Hvordan prosjektet er bygget
+- `UniversitetApp.sln`: solution-fil
+- `UniversitetApp/`: selve app-prosjektet
+  - `Program.cs`: oppstart og applikasjonsflyt
+  - `Models/`: domeneobjekter (Student, Ansatt, Kurs, Bok, Lån, osv.)
+  - `Services/`: forretningslogikk (KursManager, BibliotekManager, AuthService, AppStateStore)
+  - `Console/`: menyer og brukerflyt per rolle
 
-Prosjektet er delt i tydelige lag:
+## Krav
 
-- Console: menyer og brukerflyt.
-- Models: domenemodeller for brukere, kurs, bøker og lån.
-- Services: forretningslogikk for autentisering, kurs og bibliotek.
-- Common: felles responsmodell for suksess/feil.
+.NET SDK 10.0+
 
-Arkitekturen gjør det enklere å holde UI, domene og logikk adskilt.
+Sjekk versjon:
 
-## Data og lagring
+```bash
+dotnet --version
+```
 
-Systemet bruker data.json for enkel persistens.
+## Bygg og kjør
 
-- Ved oppstart forsøker appen å laste data fra fil.
-- Hvis fil ikke finnes eller ikke kan leses, brukes eksempeldata.
-- Ved avslutning lagres oppdatert tilstand tilbake til fil.
-
-## Kjøring av prosjektet
-
-Krav: .NET SDK 10.0 eller nyere.
-
-Bygg og kjør fra prosjektrot:
+Fra prosjektroten:
 
 ```bash
 dotnet build UniversitetApp.sln
 dotnet run --project UniversitetApp/UniversitetApp.csproj
 ```
 
+Evt. hvis du er i `UniversitetApp`-mappa:
+
+```bash
+dotnet build
+dotnet run
+```
+
+## Eksempelbrukere
+
+| Brukernavn | Passord | Rolle            |
+|------------|---------|------------------|
+| kari       | pass123 | Student          |
+| ola        | pass123 | Student          |
+| larsen     | pass123 | Faglærer         |
+| maja       | pass123 | Bibliotekansatt  |
+
 ## Tester
-
-Prosjektet inneholder et eget testprosjekt med enhetstester for sentrale regler.
-
-Kjør tester:
 
 ```bash
 dotnet test UniversitetApp.sln
 ```
 
-## Eksempelbrukere
+## Notater
 
-- Student: kari / pass123
-- Student: ola / pass123
-- Faglærer: larsen / pass123
-- Bibliotekansatt: maja / pass123
+- Tilstand lagres i `data.json` og lastes ved oppstart.
+- Hvis filen mangler eller er ugyldig, brukes innebygd eksempeldata.
+- Input valideres i service- og modell-lag.
