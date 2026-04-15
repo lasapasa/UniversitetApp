@@ -21,7 +21,7 @@ public class Bok
         if (antallEksemplarer <= 0)
             throw new ArgumentException("Antall eksemplarer må være større enn 0.", nameof(antallEksemplarer));
 
-        MediaID = mediaID;
+        MediaID = mediaID.Trim().ToUpperInvariant();
         Tittel = tittel;
         Forfatter = forfatter;
         År = år;

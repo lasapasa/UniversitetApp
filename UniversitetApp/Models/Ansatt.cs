@@ -14,12 +14,14 @@ public class Ansatt : Person
     {
         if (string.IsNullOrWhiteSpace(ansattID))
             throw new ArgumentException("AnsattID kan ikke være tom.", nameof(ansattID));
-        if (!Regex.IsMatch(ansattID, "^A\\d{3}$"))
+
+        string normalisertId = ansattID.Trim().ToUpperInvariant();
+        if (!Regex.IsMatch(normalisertId, "^A\\d{3}$"))
             throw new ArgumentException("AnsattID må ha formatet A### (f.eks. A001).", nameof(ansattID));
         if (string.IsNullOrWhiteSpace(avdeling))
             throw new ArgumentException("Avdeling kan ikke være tom.", nameof(avdeling));
 
-        AnsattID = ansattID;
+        AnsattID = normalisertId;
         Stilling = stilling;
         Avdeling = avdeling;
     }

@@ -7,13 +7,18 @@ public class Kurs
     public string Navn { get; set; }
     public int Studiepoeng { get; set; }
     public int MaksPlasser { get; set; }
+    public string LærerAnsattID { get; private set; }
     private readonly List<string> _deltakerIDs = new();
+    private readonly List<string> _pensumBokIDs = new();
+    private readonly Dictionary<string, string> _karakterer = new(StringComparer.OrdinalIgnoreCase);
     public IReadOnlyList<string> DeltakerIDs => _deltakerIDs;
+    public IReadOnlyList<string> PensumBokIDs => _pensumBokIDs;
+    public IReadOnlyDictionary<string, string> Karakterer => _karakterer;
 
     public int LedigePlasser => MaksPlasser - _deltakerIDs.Count;
     public bool ErFull => _deltakerIDs.Count >= MaksPlasser;
 
-    public Kurs(string kursKode, string navn, int studiepoeng, int maksPlasser)
+    public Kurs(string kursKode, string navn, int studiepoeng, int maksPlasser, string lærerAnsattID)
     {
         if (string.IsNullOrWhiteSpace(kursKode))
             throw new ArgumentException("Kurskode kan ikke være tom.", nameof(kursKode));
@@ -23,11 +28,14 @@ public class Kurs
             throw new ArgumentException("Studiepoeng må være større enn 0.", nameof(studiepoeng));
         if (maksPlasser <= 0)
             throw new ArgumentException("Maks plasser må være større enn 0.", nameof(maksPlasser));
+        if (string.IsNullOrWhiteSpace(lærerAnsattID))
+            throw new ArgumentException("LærerAnsattID kan ikke være tom.", nameof(lærerAnsattID));
 
-        KursKode = kursKode;
+        KursKode = kursKode.Trim().ToUpperInvariant();
         Navn = navn;
         Studiepoeng = studiepoeng;
         MaksPlasser = maksPlasser;
+        LærerAnsattID = lærerAnsattID.Trim().ToUpperInvariant();
     }
 
     public override string ToString()
@@ -47,5 +55,29 @@ public class Kurs
     public bool FjernDeltaker(string studentID)
     {
         return _deltakerIDs.RemoveAll(id => id.Equals(studentID, StringComparison.OrdinalIgnoreCase)) > 0;
+    }
+
+    public bool LeggTilPensum(string bokID)
+    {
+        if (string.IsNullOrWhiteSpace(bokID)) return false;
+
+        string normalisertBokId = bokID.Trim().ToUpperInvariant();
+        if (_pensumBokIDs.Contains(normalisertBokId, StringComparer.OrdinalIgnoreCase)) return false;
+        _pensumBokIDs.Add(normalisertBokId);
+        return true;
+    }
+
+    public bool SettKarakter(string studentID, string karakter)
+    {
+        if (string.IsNullOrWhiteSpace(studentID) || string.IsNullOrWhiteSpace(karakter)) return false;
+        if (!_deltakerIDs.Contains(studentID, StringComparer.OrdinalIgnoreCase)) return false;
+
+        _karakterer[studentID] = karakter.Trim().ToUpperInvariant();
+        return true;
+    }
+
+    public bool TryGetKarakter(string studentID, out string? karakter)
+    {
+        return _karakterer.TryGetValue(studentID, out karakter);
     }
 }

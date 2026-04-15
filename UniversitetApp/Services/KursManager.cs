@@ -5,131 +5,200 @@ namespace UniversitetApp.Services;
 // Håndterer all kursrelatert forretningslogikk: opprettelse, påmelding og søk.
 public class KursManager
 {
-    private List<Kurs> _kurs = new();
+    private readonly List<Kurs> _kurs = new();
 
-    public void OpprettKurs(string kode, string navn, int studiepoeng, int maksPlasser)
+    public IReadOnlyList<Kurs> HentAlleKurs() => _kurs;
+
+    public List<Kurs> FinnKursEtterSøk(string søkeord)
+    {
+        if (string.IsNullOrWhiteSpace(søkeord)) return _kurs.ToList();
+
+        return _kurs.Where(k =>
+            k.KursKode.Contains(søkeord, StringComparison.OrdinalIgnoreCase) ||
+            k.Navn.Contains(søkeord, StringComparison.OrdinalIgnoreCase)).ToList();
+    }
+
+    public OperationResult OpprettKurs(string kode, string navn, int studiepoeng, int maksPlasser, string lærerAnsattID)
     {
         if (string.IsNullOrWhiteSpace(kode) || string.IsNullOrWhiteSpace(navn))
         {
-            Console.WriteLine("Feil: Kurskode og kursnavn må fylles ut.");
-            return;
+            return OperationResult.Failure("Kurskode og kursnavn må fylles ut.", "validation_error");
         }
 
         if (studiepoeng <= 0 || maksPlasser <= 0)
         {
-            Console.WriteLine("Feil: Studiepoeng og maks plasser må være større enn 0.");
-            return;
+            return OperationResult.Failure("Studiepoeng og maks plasser må være større enn 0.", "validation_error");
         }
 
-        if (_kurs.Any(k => k.KursKode == kode))
+        if (_kurs.Any(k => k.KursKode.Equals(kode, StringComparison.OrdinalIgnoreCase)))
         {
-            Console.WriteLine($"Feil: Kurs med kode '{kode}' finnes allerede.");
-            return;
+            return OperationResult.Failure($"Kurs med kode '{kode}' finnes allerede.", "duplicate_course_code");
         }
 
-        _kurs.Add(new Kurs(kode, navn, studiepoeng, maksPlasser));
-        Console.WriteLine($"Kurs opprettet: {kode} – {navn}");
+        if (_kurs.Any(k => k.Navn.Equals(navn, StringComparison.OrdinalIgnoreCase)))
+        {
+            return OperationResult.Failure($"Kurs med navn '{navn}' finnes allerede.", "duplicate_course_name");
+        }
+
+        try
+        {
+            _kurs.Add(new Kurs(kode, navn, studiepoeng, maksPlasser, lærerAnsattID));
+            return OperationResult.Success($"Kurs opprettet: {kode} - {navn}");
+        }
+        catch (ArgumentException ex)
+        {
+            return OperationResult.Failure(ex.Message, "validation_error");
+        }
     }
 
-    public void MeldPåKurs(Student student, string kursKode)
+    public OperationResult MeldPåKurs(Student student, string kursKode)
     {
         if (string.IsNullOrWhiteSpace(kursKode))
         {
-            Console.WriteLine("Feil: Kurskode kan ikke være tom.");
-            return;
+            return OperationResult.Failure("Kurskode kan ikke være tom.", "validation_error");
         }
 
-        // Slår opp kurs én gang og stopper tidlig ved feil.
-        var kurs = FinnKurs(kursKode);
-        if (kurs == null) return;
+        var kurs = FinnKurs(kursKode, out var finnFeil);
+        if (kurs == null)
+        {
+            return OperationResult.Failure(finnFeil, "course_not_found");
+        }
 
         if (kurs.ErFull)
         {
-            Console.WriteLine($"Feil: Kurset '{kurs.Navn}' er fullt ({kurs.MaksPlasser} plasser).");
-            return;
+            return OperationResult.Failure($"Kurset '{kurs.Navn}' er fullt ({kurs.MaksPlasser} plasser).", "course_full");
         }
 
         if (kurs.DeltakerIDs.Contains(student.StudentID, StringComparer.OrdinalIgnoreCase))
         {
-            Console.WriteLine($"Feil: {student.Navn} er allerede påmeldt '{kurs.Navn}'.");
-            return;
+            return OperationResult.Failure($"{student.Navn} er allerede påmeldt '{kurs.Navn}'.", "already_enrolled");
         }
 
         kurs.LeggTilDeltaker(student.StudentID);
         student.LeggTilKurs(kurs.KursKode);
-        Console.WriteLine($"{student.Navn} er nå påmeldt '{kurs.Navn}'. Ledige plasser: {kurs.LedigePlasser}");
+        return OperationResult.Success($"{student.Navn} er nå påmeldt '{kurs.Navn}'. Ledige plasser: {kurs.LedigePlasser}");
     }
 
-    public void MeldAvKurs(Student student, string kursKode)
+    public OperationResult MeldAvKurs(Student student, string kursKode)
     {
         if (string.IsNullOrWhiteSpace(kursKode))
         {
-            Console.WriteLine("Feil: Kurskode kan ikke være tom.");
-            return;
+            return OperationResult.Failure("Kurskode kan ikke være tom.", "validation_error");
         }
 
-        var kurs = FinnKurs(kursKode);
-        if (kurs == null) return;
+        var kurs = FinnKurs(kursKode, out var finnFeil);
+        if (kurs == null)
+        {
+            return OperationResult.Failure(finnFeil, "course_not_found");
+        }
 
         bool fjernet = kurs.FjernDeltaker(student.StudentID);
         student.FjernKurs(kursKode);
 
         if (fjernet)
-            Console.WriteLine($"{student.Navn} er meldt av '{kurs.Navn}'.");
+        {
+            return OperationResult.Success($"{student.Navn} er meldt av '{kurs.Navn}'.");
+        }
         else
-            Console.WriteLine($"Feil: {student.Navn} er ikke påmeldt '{kurs.Navn}'.");
+        {
+            return OperationResult.Failure($"{student.Navn} er ikke påmeldt '{kurs.Navn}'.", "not_enrolled");
+        }
     }
 
-    public void PrintKursOgDeltakere(List<Student> studenter)
+    public OperationResult SettKarakter(Ansatt lærer, string kursKode, string studentID, string karakter)
     {
-        if (_kurs.Count == 0)
+        if (lærer.Stilling != StillingType.Foreleser)
         {
-            Console.WriteLine("Ingen kurs registrert.");
-            return;
+            return OperationResult.Failure("Kun faglærer (Foreleser) kan sette karakter.", "insufficient_role");
         }
 
-        _kurs.ForEach(kurs =>
+        var kurs = FinnKurs(kursKode, out var finnFeil);
+        if (kurs == null)
         {
-            Console.WriteLine($"\n{kurs}");
-            if (!kurs.DeltakerIDs.Any())
-            {
-                Console.WriteLine("  Ingen deltakere.");
-            }
-            else
-            {
-                // Maper ID-er til studentobjekter for lesbar utskrift.
-                kurs.DeltakerIDs
-                    .Select(id => studenter.FirstOrDefault(s => s.StudentID.Equals(id, StringComparison.OrdinalIgnoreCase)))
-                    .Where(s => s != null)
-                    .ToList()
-                    .ForEach(s => Console.WriteLine($"  - {s!.Navn} ({s.StudentID})"));
-            }
-        });
-    }
-
-    public void SøkEtterKurs(string søkeord)
-    {
-        var treff = _kurs.Where(k =>
-            k.KursKode.Contains(søkeord, StringComparison.OrdinalIgnoreCase) ||
-            k.Navn.Contains(søkeord, StringComparison.OrdinalIgnoreCase)).ToList();
-
-        if (treff.Count == 0)
-        {
-            Console.WriteLine($"Ingen kurs funnet for '{søkeord}'.");
-            return;
+            return OperationResult.Failure(finnFeil, "course_not_found");
         }
 
-        Console.WriteLine($"Fant {treff.Count} kurs:");
-        foreach (var kurs in treff)
-            Console.WriteLine($"  {kurs}");
+        if (!kurs.LærerAnsattID.Equals(lærer.AnsattID, StringComparison.OrdinalIgnoreCase))
+        {
+            return OperationResult.Failure("Du kan kun sette karakter i kurs du underviser.", "not_course_teacher");
+        }
+
+        if (!kurs.DeltakerIDs.Contains(studentID, StringComparer.OrdinalIgnoreCase))
+        {
+            return OperationResult.Failure("Studenten er ikke meldt på kurset.", "student_not_enrolled");
+        }
+
+        if (!ErGyldigKarakter(karakter))
+        {
+            return OperationResult.Failure("Ugyldig karakter. Gyldige verdier: A, B, C, D, E, F.", "invalid_grade");
+        }
+
+        kurs.SettKarakter(studentID, karakter);
+        return OperationResult.Success("Karakter registrert.");
     }
 
-    private Kurs? FinnKurs(string kursKode)
+    public OperationResult RegistrerPensum(Ansatt lærer, string kursKode, string bokID)
+    {
+        if (lærer.Stilling != StillingType.Foreleser)
+        {
+            return OperationResult.Failure("Kun faglærer (Foreleser) kan registrere pensum.", "insufficient_role");
+        }
+
+        var kurs = FinnKurs(kursKode, out var finnFeil);
+        if (kurs == null)
+        {
+            return OperationResult.Failure(finnFeil, "course_not_found");
+        }
+
+        if (!kurs.LærerAnsattID.Equals(lærer.AnsattID, StringComparison.OrdinalIgnoreCase))
+        {
+            return OperationResult.Failure("Du kan kun registrere pensum i kurs du underviser.", "not_course_teacher");
+        }
+
+        if (!kurs.LeggTilPensum(bokID))
+        {
+            return OperationResult.Failure("Pensumbok er ugyldig eller finnes allerede i kurset.", "invalid_or_duplicate_pensum");
+        }
+
+        return OperationResult.Success("Pensum registrert.");
+    }
+
+    public List<Kurs> HentKursForStudent(string studentID)
+    {
+        return _kurs.Where(k => k.DeltakerIDs.Contains(studentID, StringComparer.OrdinalIgnoreCase)).ToList();
+    }
+
+    public List<Kurs> HentKursForLærer(string ansattID)
+    {
+        return _kurs.Where(k => k.LærerAnsattID.Equals(ansattID, StringComparison.OrdinalIgnoreCase)).ToList();
+    }
+
+    public string HentKarakter(Student student, string kursKode)
     {
         var kurs = _kurs.FirstOrDefault(k => k.KursKode.Equals(kursKode, StringComparison.OrdinalIgnoreCase));
+        if (kurs == null) return "Kurs ikke funnet.";
+
+        if (!kurs.DeltakerIDs.Contains(student.StudentID, StringComparer.OrdinalIgnoreCase))
+            return "Ikke påmeldt kurs.";
+
+        return kurs.TryGetKarakter(student.StudentID, out var karakter)
+            ? karakter ?? "-"
+            : "Ikke satt";
+    }
+
+    private Kurs? FinnKurs(string kursKode, out string feil)
+    {
+        feil = string.Empty;
+        var kurs = _kurs.FirstOrDefault(k => k.KursKode.Equals(kursKode, StringComparison.OrdinalIgnoreCase));
         if (kurs == null)
-            Console.WriteLine($"Feil: Fant ikke kurs med kode '{kursKode}'.");
+            feil = $"Fant ikke kurs med kode '{kursKode}'.";
         return kurs;
+    }
+
+    private static bool ErGyldigKarakter(string karakter)
+    {
+        string[] gyldige = ["A", "B", "C", "D", "E", "F"];
+        return gyldige.Contains((karakter ?? string.Empty).Trim().ToUpperInvariant());
     }
 
 }

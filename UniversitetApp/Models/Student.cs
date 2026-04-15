@@ -14,10 +14,12 @@ public class Student : Person
     {
         if (string.IsNullOrWhiteSpace(studentID))
             throw new ArgumentException("StudentID kan ikke være tom.", nameof(studentID));
-        if (!Regex.IsMatch(studentID, "^S\\d{3}$"))
+
+        string normalisertId = studentID.Trim().ToUpperInvariant();
+        if (!Regex.IsMatch(normalisertId, "^S\\d{3}$"))
             throw new ArgumentException("StudentID må ha formatet S### (f.eks. S001).", nameof(studentID));
 
-        StudentID = studentID;
+        StudentID = normalisertId;
     }
 
     // override av abstrakt metode fra Person – polymorfisme

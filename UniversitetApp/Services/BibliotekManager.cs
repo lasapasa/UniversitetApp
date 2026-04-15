@@ -5,66 +5,88 @@ namespace UniversitetApp.Services;
 // Håndterer bibliotekflyt: registrering, utlån, retur og enkel søking.
 public class BibliotekManager
 {
-    private List<Bok> _bøker = new();
-    private List<Laan> _lånHistorikk = new();
+    private readonly List<Bok> _bøker = new();
+    private readonly List<Laan> _lånHistorikk = new();
 
-    public void RegistrerBok(string mediaID, string tittel, string forfatter, int år, int antallEksemplarer)
+    public IReadOnlyList<Bok> HentAlleBøker() => _bøker;
+    public List<Laan> HentAktiveLån() => _lånHistorikk.Where(l => l.ErAktivt).ToList();
+    public List<Laan> HentHistorikk() => _lånHistorikk.ToList();
+
+    public List<Bok> FinnBøker(string søkeord)
+    {
+        if (string.IsNullOrWhiteSpace(søkeord)) return _bøker.ToList();
+
+        return _bøker.Where(b =>
+            b.Tittel.Contains(søkeord, StringComparison.OrdinalIgnoreCase) ||
+            b.Forfatter.Contains(søkeord, StringComparison.OrdinalIgnoreCase) ||
+            b.MediaID.Contains(søkeord, StringComparison.OrdinalIgnoreCase)).ToList();
+    }
+
+    public OperationResult RegistrerBok(string mediaID, string tittel, string forfatter, int år, int antallEksemplarer)
     {
         if (string.IsNullOrWhiteSpace(mediaID) || string.IsNullOrWhiteSpace(tittel) || string.IsNullOrWhiteSpace(forfatter))
         {
-            Console.WriteLine("Feil: Media-ID, tittel og forfatter må fylles ut.");
-            return;
+            return OperationResult.Failure("Media-ID, tittel og forfatter må fylles ut.", "validation_error");
         }
 
-        if (år <= 0 || antallEksemplarer <= 0)
+        int inneværendeÅr = DateTime.Now.Year;
+        if (år < 1450 || år > inneværendeÅr)
         {
-            Console.WriteLine("Feil: Utgivelsesår og antall eksemplarer må være større enn 0.");
-            return;
+            return OperationResult.Failure($"Utgivelsesår må være mellom 1450 og {inneværendeÅr}.", "validation_error");
         }
 
-        if (_bøker.Any(b => b.MediaID == mediaID))
+        if (antallEksemplarer <= 0)
         {
-            Console.WriteLine($"Feil: Bok med ID '{mediaID}' finnes allerede.");
-            return;
+            return OperationResult.Failure("Antall eksemplarer må være større enn 0.", "validation_error");
         }
 
-        _bøker.Add(new Bok(mediaID, tittel, forfatter, år, antallEksemplarer));
-        Console.WriteLine($"Bok registrert: \"{tittel}\" av {forfatter}");
+        if (_bøker.Any(b => b.MediaID.Equals(mediaID, StringComparison.OrdinalIgnoreCase)))
+        {
+            return OperationResult.Failure($"Bok med ID '{mediaID}' finnes allerede.", "duplicate_media_id");
+        }
+
+        try
+        {
+            _bøker.Add(new Bok(mediaID, tittel, forfatter, år, antallEksemplarer));
+            return OperationResult.Success($"Bok registrert: \"{tittel}\" av {forfatter}");
+        }
+        catch (ArgumentException ex)
+        {
+            return OperationResult.Failure(ex.Message, "validation_error");
+        }
     }
 
-    public void LånUtBok(IUser bruker, string mediaID)
+    public OperationResult LånUtBok(IUser bruker, string mediaID)
     {
         if (string.IsNullOrWhiteSpace(mediaID))
         {
-            Console.WriteLine("Feil: Bok-ID kan ikke være tom.");
-            return;
+            return OperationResult.Failure("Bok-ID kan ikke være tom.", "validation_error");
         }
 
-        // Stopper tidlig hvis bok ikke finnes eller ikke kan lånes ut.
-        var bok = FinnBok(mediaID);
-        if (bok == null) return;
+        var bok = FinnBok(mediaID, out var finnFeil);
+        if (bok == null)
+        {
+            return OperationResult.Failure(finnFeil, "book_not_found");
+        }
 
         if (!bok.ErTilgjengelig)
         {
-            Console.WriteLine($"Feil: \"{bok.Tittel}\" er ikke tilgjengelig for utlån.");
-            return;
+            return OperationResult.Failure($"\"{bok.Tittel}\" er ikke tilgjengelig for utlån.", "book_unavailable");
         }
 
         bok.TilgjengeligeEksemplarer--;
         var lån = new Laan(bruker, bok);
         _lånHistorikk.Add(lån);
-        Console.WriteLine($"{bruker.Navn} har lånt \"{bok.Tittel}\". Tilgjengelige eksemplarer: {bok.TilgjengeligeEksemplarer}");
+        return OperationResult.Success($"{bruker.Navn} har lånt \"{bok.Tittel}\". Tilgjengelige eksemplarer: {bok.TilgjengeligeEksemplarer}");
     }
 
-    public void ReturnerBok(IUser bruker, string mediaID)
+    public OperationResult ReturnerBok(IUser bruker, string mediaID)
     {
         if (string.IsNullOrWhiteSpace(mediaID))
         {
-            Console.WriteLine("Feil: Bok-ID kan ikke være tom.");
-            return;
+            return OperationResult.Failure("Bok-ID kan ikke være tom.", "validation_error");
         }
 
-        // Finner aktivt lån for riktig bruker og medie-ID.
         var aktivtLån = _lånHistorikk.FirstOrDefault(l =>
             l.ErAktivt &&
             l.Bruker == bruker &&
@@ -72,18 +94,17 @@ public class BibliotekManager
 
         if (aktivtLån == null)
         {
-            Console.WriteLine($"Feil: Fant ikke aktivt lån for denne boken og brukeren.");
-            return;
+            return OperationResult.Failure("Fant ikke aktivt lån for denne boken og brukeren.", "active_loan_not_found");
         }
 
         aktivtLån.Returner();
         aktivtLån.Bok.TilgjengeligeEksemplarer++;
-        Console.WriteLine($"{bruker.Navn} har returnert \"{aktivtLån.Bok.Tittel}\".");
+        return OperationResult.Success($"{bruker.Navn} har returnert \"{aktivtLån.Bok.Tittel}\".");
     }
 
     public void VisAktiveLån()
     {
-        var aktive = _lånHistorikk.Where(l => l.ErAktivt).ToList();
+        var aktive = HentAktiveLån();
 
         if (aktive.Count == 0)
         {
@@ -111,10 +132,7 @@ public class BibliotekManager
 
     public void SøkEtterBok(string søkeord)
     {
-        var treff = _bøker.Where(b =>
-            b.Tittel.Contains(søkeord, StringComparison.OrdinalIgnoreCase) ||
-            b.Forfatter.Contains(søkeord, StringComparison.OrdinalIgnoreCase) ||
-            b.MediaID.Contains(søkeord, StringComparison.OrdinalIgnoreCase)).ToList();
+        var treff = FinnBøker(søkeord);
 
         if (treff.Count == 0)
         {
@@ -127,11 +145,12 @@ public class BibliotekManager
             Console.WriteLine($"  {bok}");
     }
 
-    private Bok? FinnBok(string mediaID)
+    private Bok? FinnBok(string mediaID, out string feil)
     {
+        feil = string.Empty;
         var bok = _bøker.FirstOrDefault(b => b.MediaID.Equals(mediaID, StringComparison.OrdinalIgnoreCase));
         if (bok == null)
-            Console.WriteLine($"Feil: Fant ikke bok med ID '{mediaID}'.");
+            feil = $"Fant ikke bok med ID '{mediaID}'.";
         return bok;
     }
 
