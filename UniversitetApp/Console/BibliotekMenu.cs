@@ -1,3 +1,4 @@
+using UniversitetApp.Models;
 using UniversitetApp.Services;
 
 namespace UniversitetApp;
@@ -46,8 +47,24 @@ public class BibliotekMenu
                     case "3":
                     {
                         var aktive = _bibliotekManager.HentAktiveLån();
-                        if (aktive.Count == 0) Console.WriteLine("Ingen aktive lån.");
-                        else foreach (var l in aktive) Console.WriteLine($"- {l}");
+                        if (aktive.Count == 0)
+                        {
+                            Console.WriteLine("Ingen aktive lån.");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"\n{aktive.Count} aktivt lån:");
+                            int nr = 1;
+                            foreach (var l in aktive)
+                            {
+                                string brukerId = l.Bruker is Student st ? st.StudentID
+                                                : l.Bruker is Ansatt ans ? ans.AnsattID
+                                                : "ukjent";
+                                Console.WriteLine($"{nr++}. [{brukerId}] {l.Bruker.Navn}");
+                                Console.WriteLine($"   Bok: \"{l.Bok.Tittel}\" ({l.Bok.MediaID})");
+                                Console.WriteLine($"   Lånt: {l.LånDato:dd.MM.yyyy}");
+                            }
+                        }
                         break;
                     }
                     case "4":

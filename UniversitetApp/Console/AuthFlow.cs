@@ -59,7 +59,7 @@ public class AuthFlow
             {
                 string id = InputHelper.LesIkkeTom("StudentID (format S###): ");
                 string navn = InputHelper.LesIkkeTom("Navn: ");
-                string epost = InputHelper.LesIkkeTom("Epost: ");
+                string epost = LesGyldigEpost();
 
                 var result = _authService.RegisterStudent(username, password, id, navn, epost, _studenter);
                 if (!result.IsSuccess || result.Data == null)
@@ -77,7 +77,7 @@ public class AuthFlow
             {
                 string id = InputHelper.LesIkkeTom("AnsattID (format A###): ");
                 string navn = InputHelper.LesIkkeTom("Navn: ");
-                string epost = InputHelper.LesIkkeTom("Epost: ");
+                string epost = LesGyldigEpost();
                 string avdeling = InputHelper.LesIkkeTom("Avdeling: ");
 
                 var result = _authService.RegisterAnsatt(
@@ -106,7 +106,7 @@ public class AuthFlow
             {
                 string id = InputHelper.LesIkkeTom("AnsattID (format A###): ");
                 string navn = InputHelper.LesIkkeTom("Navn: ");
-                string epost = InputHelper.LesIkkeTom("Epost: ");
+                string epost = LesGyldigEpost();
                 string avdeling = InputHelper.LesIkkeTom("Avdeling: ");
 
                 var result = _authService.RegisterAnsatt(
@@ -147,6 +147,23 @@ public class AuthFlow
     {
         _ansatteById.TryGetValue(account.ReferenceId, out var ansatt);
         return ansatt;
+    }
+
+    private static string LesGyldigEpost()
+    {
+        while (true)
+        {
+            string epost = InputHelper.LesIkkeTom("Epost: ");
+            try
+            {
+                var addr = new System.Net.Mail.MailAddress(epost);
+                if (addr.Address == epost && addr.Host.Contains('.'))
+                    return epost;
+            }
+            catch { }
+
+            Console.WriteLine("Ugyldig epost. Prøv igjen.");
+        }
     }
 
     private static Dictionary<string, Student> ByggStudentIndeks(IEnumerable<Student> studenter)
