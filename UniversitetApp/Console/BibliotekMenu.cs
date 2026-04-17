@@ -3,15 +3,26 @@ using UniversitetApp.Services;
 
 namespace UniversitetApp;
 
+/// <summary>
+/// Meny for bibliotekansattes operasjoner.
+/// Tillater registrering av bøker, visning av låner og lånehistorikk.
+/// </summary>
 public class BibliotekMenu
 {
     private readonly BibliotekManager _bibliotekManager;
 
+    /// <summary>
+    /// Initialiserer en bibliotekmeny.
+    /// </summary>
+    /// <param name="bibliotekManager">Manager for bibliotekoperasjoner</param>
     public BibliotekMenu(BibliotekManager bibliotekManager)
     {
         _bibliotekManager = bibliotekManager;
     }
 
+    /// <summary>
+    /// Kjører bibliotekmeny-løkka for bibliotekansatt.
+    /// </summary>
     public void Run()
     {
         bool aktiv = true;

@@ -2,14 +2,26 @@ using UniversitetApp.Models;
 
 namespace UniversitetApp.Services;
 
-// Håndterer all kursrelatert forretningslogikk: opprettelse, påmelding og søk.
+/// <summary>
+/// Håndterer all kursrelatert forretningslogikk: opprettelse, påmelding, avmelding og søk.
+/// Vedlikeholder både liste og indeks av kurs for effektiv oppslag.
+/// </summary>
 public class KursManager
 {
     private readonly List<Kurs> _kurs = new();
     private readonly Dictionary<string, Kurs> _kursByKode = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Returnerer en skrivebeskyttet liste over alle kurs.
+    /// </summary>
     public IReadOnlyList<Kurs> HentAlleKurs() => _kurs;
 
+    /// <summary>
+    /// Søker etter kurs basert på søkeord.
+    /// Matcher både kurskode og kursnavn (case-insensitive).
+    /// </summary>
+    /// <param name="søkeord">Søkord som skal matches mot kurskode eller navn</param>
+    /// <returns>Liste over matchende kurs, eller alle kurs hvis søkeord er tomt</returns>
     public List<Kurs> FinnKursEtterSøk(string søkeord)
     {
         if (string.IsNullOrWhiteSpace(søkeord)) return _kurs.ToList();
@@ -19,6 +31,16 @@ public class KursManager
             k.Navn.Contains(søkeord, StringComparison.OrdinalIgnoreCase)).ToList();
     }
 
+    /// <summary>
+    /// Oppretter et nytt kurs med validering.
+    /// Sikrer at kurskode og navn er unike.
+    /// </summary>
+    /// <param name="kode">Kurskode (må være unik)</param>
+    /// <param name="navn">Kursnavn (må være unikt)</param>
+    /// <param name="studiepoeng">Antall studiepoeng (må være > 0)</param>
+    /// <param name="maksPlasser">Maks antal deltakere (må være > 0)</param>
+    /// <param name="lærerAnsattID">ID på ansatt som skal være lærer</param>
+    /// <returns>Resultat som indikerer om opprettelse var vellykket</returns>
     public OperationResult OpprettKurs(string kode, string navn, int studiepoeng, int maksPlasser, string lærerAnsattID)
     {
         if (string.IsNullOrWhiteSpace(kode) || string.IsNullOrWhiteSpace(navn))
@@ -54,6 +76,13 @@ public class KursManager
         }
     }
 
+    /// <summary>
+    /// Melder student på kurs.
+    /// Validerer at kurs eksisterer, ikke er fullt, og At student ikke allerede er påmeldt.
+    /// </summary>
+    /// <param name="student">Student som skal meldes på</param>
+    /// <param name="kursKode">Kurskode for kurset som skal meldes på</param>
+    /// <returns>Resultat med statusmelding</returns>
     public OperationResult MeldPåKurs(Student student, string kursKode)
     {
         if (string.IsNullOrWhiteSpace(kursKode))
@@ -82,6 +111,13 @@ public class KursManager
         return OperationResult.Success($"{student.Navn} er nå påmeldt '{kurs.Navn}'. Ledige plasser: {kurs.LedigePlasser}");
     }
 
+    /// <summary>
+    /// Melder student av kurs.
+    /// Fjerner student fra kursets deltakerliste og oppdaterer studentens kursliste.
+    /// </summary>
+    /// <param name="student">Student som skal meldes av</param>
+    /// <param name="kursKode">Kurskode for kurset som skal meldes av</param>
+    /// <returns>Resultat med statusmelding</returns>
     public OperationResult MeldAvKurs(Student student, string kursKode)
     {
         if (string.IsNullOrWhiteSpace(kursKode))

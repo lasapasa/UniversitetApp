@@ -3,17 +3,30 @@ using UniversitetApp.Services;
 
 namespace UniversitetApp;
 
+/// <summary>
+/// Meny for studentbrukerens interaktive operasjoner.
+/// Tillater påmelding/avmelding fra kurs, visning av karakterer og bibliotekoperasjoner.
+/// </summary>
 public class StudentMenu
 {
     private readonly KursManager _kursManager;
     private readonly BibliotekManager _bibliotekManager;
 
+    /// <summary>
+    /// Initialiserer en studentmeny.
+    /// </summary>
+    /// <param name="kursManager">Manager for kursoperasjoner</param>
+    /// <param name="bibliotekManager">Manager for bøkoperasjoner</param>
     public StudentMenu(KursManager kursManager, BibliotekManager bibliotekManager)
     {
         _kursManager = kursManager;
         _bibliotekManager = bibliotekManager;
     }
 
+    /// <summary>
+    /// Kjører studentmeny-løkka for en spesifikk student.
+    /// </summary>
+    /// <param name="student">Studenten som er logget inn</param>
     public void Run(Student student)
     {
         bool aktiv = true;

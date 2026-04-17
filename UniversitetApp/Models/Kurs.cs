@@ -1,21 +1,43 @@
 namespace UniversitetApp.Models;
 
-// Kurs holder fagdata og en kapslet deltakerliste med student-ID-er.
+/// <summary>
+/// Representerer et kurs i systemet.
+/// Inneholder fagdata, deltakerliste, pensum og karakterer.
+/// </summary>
 public class Kurs
 {
+    /// <summary>Unik kurskode (f.eks. INF101)</summary>
     public string KursKode { get; set; }
+    
+    /// <summary>Kursets navn</summary>
     public string Navn { get; set; }
+    
+    /// <summary>Antall studiepoeng</summary>
     public int Studiepoeng { get; set; }
+    
+    /// <summary>Maksimalt antall deltakere</summary>
     public int MaksPlasser { get; set; }
+    
+    /// <summary>Ansatt-ID for underviseren av kurset</summary>
     public string LærerAnsattID { get; private set; }
+    
     private readonly List<string> _deltakerIDs = new();
     private readonly List<string> _pensumBokIDs = new();
     private readonly Dictionary<string, string> _karakterer = new(StringComparer.OrdinalIgnoreCase);
+    
+    /// <summary>Skrivebeskyttet liste over student-ID-er som er påmeldt kurset</summary>
     public IReadOnlyList<string> DeltakerIDs => _deltakerIDs;
+    
+    /// <summary>Skrivebeskyttet liste over pensum-bok-ID-er</summary>
     public IReadOnlyList<string> PensumBokIDs => _pensumBokIDs;
+    
+    /// <summary>Skrivebeskyttet dictionary over studenters karakterer (StudentID → Karakter)</summary>
     public IReadOnlyDictionary<string, string> Karakterer => _karakterer;
 
+    /// <summary>Beregnet: hvor mange plasser som er ledige</summary>
     public int LedigePlasser => MaksPlasser - _deltakerIDs.Count;
+    
+    /// <summary>Beregnet: om kurset er fullt oppsatt</summary>
     public bool ErFull => _deltakerIDs.Count >= MaksPlasser;
 
     public Kurs(string kursKode, string navn, int studiepoeng, int maksPlasser, string lærerAnsattID)

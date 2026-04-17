@@ -2,13 +2,29 @@ using UniversitetApp.Models;
 
 namespace UniversitetApp.Services;
 
+/// <summary>
+/// Håndterer autentisering og kontoregistrering for både studenter og ansatte.
+/// Vedlikeholder både liste og indeks av kontoer for effektiv oppslag.
+/// </summary>
 public class AuthService
 {
     private readonly List<UserAccount> _accounts = new();
     private readonly Dictionary<string, UserAccount> _accountsByUsername = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Returnerer en skrivebeskyttet liste over alle kontoer.
+    /// </summary>
     public IReadOnlyList<UserAccount> Accounts => _accounts;
 
+    /// <summary>
+    /// Registrerer en ny konto med validering.
+    /// Sikrer at brukernavn er unikt og at referansen ikke allerede er registrert med samme rolle.
+    /// </summary>
+    /// <param name="username">Brukernavn (må være unikt)</param>
+    /// <param name="password">Passord for kontoen</param>
+    /// <param name="role">Rolle som Student, Faglærer eller BibliotekAnsatt</param>
+    /// <param name="referenceId">Referanse-ID (StudentID eller AnsattID)</param>
+    /// <returns>Resultat som indikerer om registrering var vellykket</returns>
     public OperationResult Register(string username, string password, AppRole role, string referenceId)
     {
         if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(referenceId))
@@ -39,6 +55,17 @@ public class AuthService
         }
     }
 
+    /// <summary>
+    /// Registrerer en ny student og oppretter konto for studenten.
+    /// Validerer at StudentID ikke allerede finnes.
+    /// </summary>
+    /// <param name="username">Brukernavn for kontoen</param>
+    /// <param name="password">Passord for kontoen</param>
+    /// <param name="studentId">Student-ID (må være unik)</param>
+    /// <param name="navn">Student navn</param>
+    /// <param name="epost">Student e-post</param>
+    /// <param name="studenter">Koleksjon av eksisterende studenter</param>
+    /// <returns>Resultat med ny student hvis vellykket</returns>
     public OperationResult<Student> RegisterStudent(
         string username,
         string password,
@@ -72,6 +99,20 @@ public class AuthService
         return OperationResult<Student>.Success("Ny student registrert.", student);
     }
 
+    /// <summary>
+    /// Registrerer en ny ansatt og oppretter konto med riktig rolle basert på stilling.
+    /// Validerer at AnsattID ikke allerede finnes.
+    /// </summary>
+    /// <param name="username">Brukernavn for kontoen</param>
+    /// <param name="password">Passord for kontoen</param>
+    /// <param name="ansattId">Ansatt-ID (må være unik)</param>
+    /// <param name="navn">Ansatt navn</param>
+    /// <param name="epost">Ansatt e-post</param>
+    /// <param name="avdeling">Ansatt avdeling</param>
+    /// <param name="stilling">Stillingtype (Foreleser, etc.)</param>
+    /// <param name="role">Rolle som Faglærer eller BibliotekAnsatt</param>
+    /// <param name="ansatte">Koleksjon av eksisterende ansatte</param>
+    /// <returns>Resultat med ny ansatt hvis vellykket</returns>
     public OperationResult<Ansatt> RegisterAnsatt(
         string username,
         string password,

@@ -3,6 +3,10 @@ using UniversitetApp.Services;
 
 namespace UniversitetApp;
 
+/// <summary>
+/// Hovedklasse for universitetssystemet.
+/// Håndterer initialisering, datainnlasting/lagring, og bruker-menyvalg.
+/// </summary>
 public class UniversitetConsoleApp
 {
     private readonly KursManager _kursManager = new();
@@ -15,6 +19,10 @@ public class UniversitetConsoleApp
     private readonly FaglaererMenu _faglaererMenu;
     private readonly BibliotekMenu _bibliotekMenu;
 
+    /// <summary>
+    /// Initialiserer applikasjonen.
+    /// Laster data fra fil hvis den eksisterer, ellers bruker eksempeldata.
+    /// </summary>
     public UniversitetConsoleApp()
     {
         _dataFilsti = FinnDataFilsti();
@@ -44,6 +52,10 @@ public class UniversitetConsoleApp
         _bibliotekMenu = new BibliotekMenu(_bibliotekManager);
     }
 
+    /// <summary>
+    /// Kjører hovedmeny-løkka av applikasjonen.
+    /// Bruker kan velge å logge inn, registrere ny bruker, eller avslutte.
+    /// </summary>
     public void Run()
     {
         bool kjør = true;
@@ -83,6 +95,9 @@ public class UniversitetConsoleApp
         }
     }
 
+    /// <summary>
+    /// Fører bruker gjennom innlogging og åpner riktig meny basert på rolle.
+    /// </summary>
     private void LoggInnOgKjør()
     {
         if (!_authFlow.TryLogin(out var account) || account == null) return;
@@ -122,6 +137,9 @@ public class UniversitetConsoleApp
         Console.WriteLine("Ukjent rolle.");
     }
 
+    /// <summary>
+    /// Lagrer hele applikasjonstilstanden til JSON-fil når bruker avslutter.
+    /// </summary>
     private void LagreDataTilFil()
     {
         var snapshot = new AppStateSnapshot(
@@ -139,6 +157,10 @@ public class UniversitetConsoleApp
         }
     }
 
+    /// <summary>
+    /// Finner data.json-filen i gjeldende mappe eller brukerens hjemmemappe.
+    /// </summary>
+    /// <returns>Full filsti til data.json</returns>
     private static string FinnDataFilsti()
     {
         string nåværendeMappe = Directory.GetCurrentDirectory();

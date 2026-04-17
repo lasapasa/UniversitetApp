@@ -2,13 +2,31 @@ using System.Text.RegularExpressions;
 
 namespace UniversitetApp.Models;
 
-// Domeneobjekt for ansatte med rolle og organisatorisk tilhørighet.
+/// <summary>
+/// Representerer en ansatt (lærer eller bibliotekansatte) i systemet.
+/// Inneholder stil...og og organisatorisk tilhørighet.
+/// AnsattID valideres mot formatet A###.
+/// </summary>
 public class Ansatt : Person
 {
+    /// <summary>Unik identifikator for ansatt (format: A###)</summary>
     public string AnsattID { get; private set; }
+    
+    /// <summary>Stillingskategorien for denne ansatte</summary>
     public StillingType Stilling { get; private set; }
+    
+    /// <summary>Organisatorisk avdeling som ansatte tilhører</summary>
     public string Avdeling { get; private set; }
 
+    /// <summary>
+    /// Initialiserer en ny ansatt med validering av AnsattID-format og avdelingsinformasjon.
+    /// </summary>
+    /// <param name="ansattID">Ansatt-ID i format A### (f.eks. A001)</param>
+    /// <param name="navn">Ansattes navn</param>
+    /// <param name="epost">Ansattes e-postadresse</param>
+    /// <param name="stilling">Stillingskategori (Foreleser eller Bibliotekar)</param>
+    /// <param name="avdeling">Avdeling eller institusjon som ansatte tilhører</param>
+    /// <exception cref="ArgumentException">Hvis AnsattID ikke har korrekt format eller avdeling er tom</exception>
     public Ansatt(string ansattID, string navn, string epost, StillingType stilling, string avdeling)
         : base(navn, epost)
     {
@@ -26,7 +44,8 @@ public class Ansatt : Person
         Avdeling = avdeling;
     }
 
-    // override av abstrakt metode fra Person
+    /// <summary>Returnerer formatert informasjon om ansatte for visning</summary>
+    /// <returns>Tekststreng med ansatt-detaljer</returns>
     public override string HentInfo()
     {
         return $"[Ansatt] {AnsattID} | {Navn} | {Epost} | {Stilling} | {Avdeling}";

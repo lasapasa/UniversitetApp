@@ -3,6 +3,9 @@ using UniversitetApp.Models;
 
 namespace UniversitetApp.Services;
 
+/// <summary>
+/// Snapshot av hele applikasjonens tilstand: studenter, ansatte, kurs, bøker, lån og kontoer.
+/// </summary>
 public sealed class AppStateSnapshot
 {
     public List<Student> Studenter { get; }
@@ -29,6 +32,9 @@ public sealed class AppStateSnapshot
     }
 }
 
+/// <summary>
+/// Håndterer persistering og henting av applikasjonens tilstand fra JSON-fil.
+/// </summary>
 public static class AppStateStore
 {
     private static readonly JsonSerializerOptions ReadOptions = new()
@@ -41,6 +47,11 @@ public static class AppStateStore
         WriteIndented = true
     };
 
+    /// <summary>
+    /// Laster applikasjonens tilstand fra JSON-fil og fyller den med data.
+    /// </summary>
+    /// <param name="filePath">Stien til JSON-filen som skal lastes</param>
+    /// <returns>Resultat med snapshot av tilstanden hvis vellykket, ellers feilmelding</returns>
     public static OperationResult<AppStateSnapshot> LastInn(string filePath)
     {
         if (!File.Exists(filePath))
@@ -56,7 +67,7 @@ public static class AppStateStore
             {
                 return OperationResult<AppStateSnapshot>.Failure("Kunne ikke lese lagret tilstand.", "invalid_state");
             }
-            var snapshot = AppStateMapper.HydrerSnapshot(persisted);
+            var snapshot = AppStateMapper.FyllSnapshot(persisted);
             return OperationResult<AppStateSnapshot>.Success("Lagret tilstand lastet.", snapshot);
         }
         catch (Exception ex)
@@ -65,6 +76,12 @@ public static class AppStateStore
         }
     }
 
+    /// <summary>
+    /// Lagrer applikasjonens tilstand til JSON-fil.
+    /// </summary>
+    /// <param name="filePath">Stien til JSON-filen som skal lagres</param>
+    /// <param name="snapshot">Tilstanden som skal lagres</param>
+    /// <returns>Resultat som indikerer om lagring var vellykket</returns>
     public static OperationResult Lagre(string filePath, AppStateSnapshot snapshot)
     {
         try

@@ -3,16 +3,26 @@ using UniversitetApp.Models;
 
 namespace UniversitetApp.Services;
 
+/// <summary>
+/// Mapper mellom persistert tilstand (JSON) og in-memory objekter.
+/// Konverterer mellom DTO-er og domeneobjekter begge veier.
+/// </summary>
 internal static class AppStateMapper
 {
-    public static AppStateSnapshot HydrerSnapshot(PersistedAppState persisted)
+    /// <summary>
+    /// Fyller snapshot med data fra persistert tilstand.
+    /// Konverterer DTOer til domeneobjekter og oppbygger alle relasjoner.
+    /// </summary>
+    /// <param name="persisted">Persistert tilstand fra JSON-fil</param>
+    /// <returns>Snapshot med alle domeneobjekter fylt med data</returns>
+    public static AppStateSnapshot FyllSnapshot(PersistedAppState persisted)
     {
-        var studenter = HydrerStudenter(persisted.Studenter);
-        var ansatte = HydrerAnsatte(persisted.Ansatte);
-        var kurs = HydrerKurs(persisted.Kurs, ansatte);
-        var boker = HydrerBoker(persisted.Boker);
-        var laan = HydrerLaan(persisted.Laan, studenter, ansatte, boker);
-        var accounts = HydrerAccounts(persisted.Accounts);
+        var studenter = FyllStudenter(persisted.Studenter);
+        var ansatte = FyllAnsatte(persisted.Ansatte);
+        var kurs = FyllKurs(persisted.Kurs, ansatte);
+        var boker = FyllBoker(persisted.Boker);
+        var laan = FyllLaan(persisted.Laan, studenter, ansatte, boker);
+        var accounts = FyllAccounts(persisted.Accounts);
         if (accounts.Count == 0)
         {
             accounts = GenererStandardKontoer(studenter, ansatte);
@@ -100,7 +110,11 @@ internal static class AppStateMapper
         };
     }
 
-    private static List<Student> HydrerStudenter(List<StudentDto> dtos)
+    /// <summary>
+    /// Fyller studentliste med data fra DTO-er.
+    /// Håndterer både vanlige studenter og utvekslingsstudenter.
+    /// </summary>
+    private static List<Student> FyllStudenter(List<StudentDto> dtos)
     {
         var studenter = new List<Student>();
 
@@ -139,7 +153,11 @@ internal static class AppStateMapper
         return studenter;
     }
 
-    private static List<Ansatt> HydrerAnsatte(List<AnsattDto> dtos)
+    /// <summary>
+    /// Fyller ansattliste med data fra DTO-er.
+    /// Mapper stillingtype til korrekt enum-verdi.
+    /// </summary>
+    private static List<Ansatt> FyllAnsatte(List<AnsattDto> dtos)
     {
         var ansatte = new List<Ansatt>();
 
@@ -156,7 +174,12 @@ internal static class AppStateMapper
         return ansatte;
     }
 
-    private static List<Kurs> HydrerKurs(List<KursDto> dtos, List<Ansatt> ansatte)
+    /// <summary>
+    /// Fyller kursliste med data fra DTO-er.
+    /// Bygger opp deltakere, pensum, og karakterer for hvert kurs.
+    /// Bruker fallback-lærer hvis ingen lærer er spesifisert.
+    /// </summary>
+    private static List<Kurs> FyllKurs(List<KursDto> dtos, List<Ansatt> ansatte)
     {
         var kursListe = new List<Kurs>();
         string fallbackLaerer = ansatte.FirstOrDefault(a => a.Stilling == StillingType.Foreleser)?.AnsattID ?? "A001";
@@ -187,7 +210,11 @@ internal static class AppStateMapper
         return kursListe;
     }
 
-    private static List<Bok> HydrerBoker(List<BokDto> dtos)
+    /// <summary>
+    /// Fyller bøker-liste med data fra DTO-er.
+    /// Sikrer at tilgjengelige eksemplarer ikke overstiger totalt antall.
+    /// </summary>
+    private static List<Bok> FyllBoker(List<BokDto> dtos)
     {
         var boker = new List<Bok>();
 
@@ -201,7 +228,12 @@ internal static class AppStateMapper
         return boker;
     }
 
-    private static List<Laan> HydrerLaan(List<LaanDto> dtos, List<Student> studenter, List<Ansatt> ansatte, List<Bok> boker)
+    /// <summary>
+    /// Fyller lånhistorikk med data fra DTO-er.
+    /// Bygger indekser for rask oppslag av studenter, ansatte og bøker.
+    /// Skipper låner hvis bruker eller bok ikke finnes.
+    /// </summary>
+    private static List<Laan> FyllLaan(List<LaanDto> dtos, List<Student> studenter, List<Ansatt> ansatte, List<Bok> boker)
     {
         var laanHistorikk = new List<Laan>();
         var studenterById = ByggStudentIndeks(studenter);
@@ -244,7 +276,11 @@ internal static class AppStateMapper
         return laanHistorikk;
     }
 
-    private static List<UserAccount> HydrerAccounts(List<AccountDto> dtos)
+    /// <summary>
+    /// Fyller konto-liste med data fra DTO-er.
+    /// Mapper rolle string til AppRole enum.
+    /// </summary>
+    private static List<UserAccount> FyllAccounts(List<AccountDto> dtos)
     {
         var accounts = new List<UserAccount>();
 
@@ -261,6 +297,10 @@ internal static class AppStateMapper
         return accounts;
     }
 
+    /// <summary>
+    /// Genererer standardkontoer for alle studenter og ansatte hvis ingen kontoer finnes.
+    /// Lager unike brukernavn basert på e-post eller ID.
+    /// </summary>
     private static List<UserAccount> GenererStandardKontoer(List<Student> studenter, List<Ansatt> ansatte)
     {
         var kontoer = new List<UserAccount>();
@@ -285,6 +325,10 @@ internal static class AppStateMapper
         return kontoer;
     }
 
+    /// <summary>
+    /// Finner unikt brukernavn ved å legge til suffix hvis nødvendig.
+    /// Erstatter eksisterende brukernavn i HashSet-en.
+    /// </summary>
     private static string FinnUniktBrukernavn(string epost, string fallbackId, HashSet<string> brukernavn)
     {
         string kandidat = epost.Contains('@') ? epost.Split('@')[0] : fallbackId;
@@ -301,6 +345,10 @@ internal static class AppStateMapper
         return unik;
     }
 
+    /// <summary>
+    /// Synkroniserer studentenes kursliste med kursenes deltakerliste.
+    /// Sikrer at alle relasjoner er oppdatert etter innlesing av data.
+    /// </summary>
     private static void SynkStudentKursFraKursliste(List<Student> studenter, List<Kurs> kursListe)
     {
         var studenterById = ByggStudentIndeks(studenter);
@@ -317,6 +365,10 @@ internal static class AppStateMapper
         }
     }
 
+    /// <summary>
+    /// Bygger indeks (dictionary) over studenter for rask oppslag etter StudentID.
+    /// Case-insensitive nøkler for sikkerhet.
+    /// </summary>
     private static Dictionary<string, Student> ByggStudentIndeks(IEnumerable<Student> studenter)
     {
         var indeks = new Dictionary<string, Student>(StringComparer.OrdinalIgnoreCase);
@@ -331,6 +383,9 @@ internal static class AppStateMapper
         return indeks;
     }
 
+    /// <summary>
+    /// Bygger indeks over ansatte for rask oppslag etter AnsattID.
+    /// </summary>
     private static Dictionary<string, Ansatt> ByggAnsattIndeks(IEnumerable<Ansatt> ansatte)
     {
         var indeks = new Dictionary<string, Ansatt>(StringComparer.OrdinalIgnoreCase);
@@ -345,6 +400,9 @@ internal static class AppStateMapper
         return indeks;
     }
 
+    /// <summary>
+    /// Bygger indeks over bøker for rask oppslag etter MediaID.
+    /// </summary>
     private static Dictionary<string, Bok> ByggBokIndeks(IEnumerable<Bok> boker)
     {
         var indeks = new Dictionary<string, Bok>(StringComparer.OrdinalIgnoreCase);

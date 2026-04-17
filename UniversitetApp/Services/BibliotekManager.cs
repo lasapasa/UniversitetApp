@@ -2,17 +2,37 @@ using UniversitetApp.Models;
 
 namespace UniversitetApp.Services;
 
-// Håndterer bibliotekflyt: registrering, utlån, retur og enkel søking.
+/// <summary>
+/// Håndterer bibliotekflyt: registrering, utlån, retur og søking etter bøker.
+/// Vedlikeholder både liste og indeks av bøker, pluss utlånhistorikk.
+/// </summary>
 public class BibliotekManager
 {
     private readonly List<Bok> _bøker = new();
     private readonly Dictionary<string, Bok> _bøkerById = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<Laan> _lånHistorikk = new();
 
+    /// <summary>
+    /// Returnerer en skrivebeskyttet liste over alle registrerte bøker.
+    /// </summary>
     public IReadOnlyList<Bok> HentAlleBøker() => _bøker;
+
+    /// <summary>
+    /// Returnerer liste over alle aktive (ikke returnerte) lån.
+    /// </summary>
     public List<Laan> HentAktiveLån() => _lånHistorikk.Where(l => l.ErAktivt).ToList();
+
+    /// <summary>
+    /// Returnerer fullstendig utlånhistorikk (både aktive og returnerte lån).
+    /// </summary>
     public List<Laan> HentHistorikk() => _lånHistorikk.ToList();
 
+    /// <summary>
+    /// Søker etter bøker basert på tittel, forfatter eller media-ID.
+    /// Returner alle bøker hvis søkeord er tomt.
+    /// </summary>
+    /// <param name="søkeord">Søkord som skal matches (case-insensitive)</param>
+    /// <returns>Liste over matchende bøker</returns>
     public List<Bok> FinnBøker(string søkeord)
     {
         if (string.IsNullOrWhiteSpace(søkeord)) return _bøker.ToList();
@@ -23,6 +43,16 @@ public class BibliotekManager
             b.MediaID.Contains(søkeord, StringComparison.OrdinalIgnoreCase)).ToList();
     }
 
+    /// <summary>
+    /// Registrerer en ny bok i biblioteket med validering.
+    /// Sikrer at media-ID er unik og at utgivelsesår er realistisk.
+    /// </summary>
+    /// <param name="mediaID">Unik media-ID for boken</param>
+    /// <param name="tittel">Boktittel</param>
+    /// <param name="forfatter">Bokforfatter</param>
+    /// <param name="år">Utgivelsesår (mellom 1450 og inneværende år)</param>
+    /// <param name="antallEksemplarer">Antall fysiske eksemplarer i biblioteket</param>
+    /// <returns>Resultat som indikerer om registrering var vellykket</returns>
     public OperationResult RegistrerBok(string mediaID, string tittel, string forfatter, int år, int antallEksemplarer)
     {
         if (string.IsNullOrWhiteSpace(mediaID) || string.IsNullOrWhiteSpace(tittel) || string.IsNullOrWhiteSpace(forfatter))
@@ -49,6 +79,13 @@ public class BibliotekManager
 
         try
         {
+    /// <summary>
+    /// Låner ut en bok til en bruker (student eller ansatt).
+    /// Validerer at boken eksisterer og har tilgjengelige eksemplarer.
+    /// </summary>
+    /// <param name="bruker">Bruker som skal låne boken</param>
+    /// <param name="mediaID">Media-ID på boken som skal lånes ut</param>
+    /// <returns>Resultat med statusmelding</returns>
             var bok = new Bok(mediaID, tittel, forfatter, år, antallEksemplarer);
             LeggTilBokInternt(bok);
             return OperationResult.Success($"Bok registrert: \"{tittel}\" av {forfatter}");
@@ -76,7 +113,15 @@ public class BibliotekManager
         {
             return OperationResult.Failure($"\"{bok.Tittel}\" er ikke tilgjengelig for utlån.", "book_unavailable");
         }
-
+/// <summary>
+    /// Returnerer en utlånt bok.
+    /// Marker lånet som avsluttet og øker antall tilgjengelige eksemplarer.
+    /// Validerer at bruker har aktivt lån på boken.
+    /// </summary>
+    /// <param name="bruker">Bruker som returnerer boken</param>
+    /// <param name="mediaID">Media-ID på boken som skal returneres</param>
+    /// <returns>Resultat med statusmelding</returns>
+    
         bok.TilgjengeligeEksemplarer--;
         var lån = new Laan(bruker, bok);
         _lånHistorikk.Add(lån);
@@ -105,6 +150,12 @@ public class BibliotekManager
         return OperationResult.Success($"{bruker.Navn} har returnert \"{aktivtLån.Bok.Tittel}\".");
     }
 
+    /// <summary>
+    /// Laster inn bøker og lånhistorikk fra en ekstern kilde.
+    /// Tømmer eksisterende data før innlasting og bygger indeksen på nytt.
+    /// </summary>
+    /// <param name="bøker">Samling av bøker som skal lastes inn</param>
+    /// <param name="lånHistorikk">Samling av lånregistreringer som skal lastes inn</param>
     private Bok? FinnBok(string mediaID, out string feil)
     {
         feil = string.Empty;

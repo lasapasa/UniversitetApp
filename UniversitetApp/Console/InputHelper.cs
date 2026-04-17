@@ -1,7 +1,17 @@
 namespace UniversitetApp;
 
+/// <summary>
+/// Utility-klasse for konsol-input-validering.
+/// Sikrer at brukeren gir gyldig input for ulike datatyper.
+/// </summary>
 public static class InputHelper
 {
+    /// <summary>
+    /// Les en ikke-tom tekststreng fra konsolen.
+    /// Gjentar spørsmål hvis bruker gir tomt input.
+    /// </summary>
+    /// <param name="prompt">Meldingne som vises til brukeren</param>
+    /// <returns>Ikke-tom tekststreng trimmet for whitespace</returns>
     public static string LesIkkeTom(string prompt)
     {
         while (true)
@@ -13,6 +23,12 @@ public static class InputHelper
         }
     }
 
+    /// <summary>
+    /// Les et heltall fra konsolen.
+    /// Gjentar spørsmål hvis bruker gir ugyldig heltall.
+    /// </summary>
+    /// <param name="prompt">Meldingen som vises til brukeren</param>
+    /// <returns>Gyldig heltall</returns>
     public static int LesInt(string prompt)
     {
         while (true)

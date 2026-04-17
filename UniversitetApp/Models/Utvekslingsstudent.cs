@@ -2,15 +2,36 @@ using System.Text.Json.Serialization;
 
 namespace UniversitetApp.Models;
 
-// Spesialisert studenttype med informasjon om utvekslingsopphold.
+/// <summary>
+/// Spesialisert studenttype som representerer en student på utveksling.
+/// Inneholder ekstra informasjon om hjemuniversitet og oppholdsperiode.
+/// </summary>
 public class Utvekslingsstudent : Student
 {
+    /// <summary>Navn på hjemuniversitet</summary>
     public string Hjemuniversitet { get; set; }
+    
+    /// <summary>Land hvor hjemuniversitetet er lokalisert</summary>
     public string Land { get; set; }
+    
+    /// <summary>Startdato for utvekslingsstudiet</summary>
     public DateOnly PeriodeFra { get; set; }
+    
+    /// <summary>Sluttdato for utvekslingsstudiet</summary>
     public DateOnly PeriodeTil { get; set; }
 
-    // Brukes ved (de)serialisering slik at utvekslingsdata leses direkte fra JSON.
+    /// <summary>
+    /// Initialiserer en ny utvekslingsstudent.
+    /// Brukes ved JSON-deserialisering.
+    /// </summary>
+    /// <param name="studentID">Student-ID i format S###</param>
+    /// <param name="navn">Studentens navn</param>
+    /// <param name="epost">Studentens e-postadresse</param>
+    /// <param name="hjemuniversitet">Navn på hjemuniversitet</param>
+    /// <param name="land">Land hvor hjemuniversitetet er</param>
+    /// <param name="periodeFra">Startdato for utveksling</param>
+    /// <param name="periodeTil">Sluttdato for utveksling</param>
+    /// <exception cref="ArgumentException">Hvis periodeFra > periodeTil eller hvis hjemuniversitet/land er tom</exception>
     [JsonConstructor]
     public Utvekslingsstudent(
         string studentID,
@@ -35,7 +56,8 @@ public class Utvekslingsstudent : Student
         PeriodeTil = periodeTil;
     }
 
-    // Overstyrt visning gir mer detaljert info for utvekslingsstudenter.
+    /// <summary>Returnerer detaljert informasjon om utvekslingsstudenten for visning</summary>
+    /// <returns>Tekststreng med utvekslingsdetaljer</returns>
     public override string HentInfo()
     {
         return $"[Utveksling] {StudentID} | {Navn} | {Epost} | {Hjemuniversitet}, {Land} | {PeriodeFra} – {PeriodeTil}";

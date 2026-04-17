@@ -3,6 +3,10 @@ using UniversitetApp.Services;
 
 namespace UniversitetApp;
 
+/// <summary>
+/// Håndterer autentiseringsflyt for innlogging og registrering av nye brukere.
+/// Vedlikeholder indekser over studenter og ansatte for rask oppslag.
+/// </summary>
 public class AuthFlow
 {
     private readonly AuthService _authService;
@@ -11,9 +15,18 @@ public class AuthFlow
     private readonly Dictionary<string, Student> _studenterById;
     private readonly Dictionary<string, Ansatt> _ansatteById;
 
+    /// <summary>Skrivebeskyttet liste over alle studenter i systemet</summary>
     public IReadOnlyList<Student> Studenter => _studenter;
+    
+    /// <summary>Skrivebeskyttet liste over alle ansatte i systemet</summary>
     public IReadOnlyList<Ansatt> Ansatte => _ansatte;
 
+    /// <summary>
+    /// Initialiserer autentiseringsflyt.
+    /// </summary>
+    /// <param name="authService">Service for autentisering</param>
+    /// <param name="studenter">Liste over systemets studenter</param>
+    /// <param name="ansatte">Liste over systemets ansatte</param>
     public AuthFlow(AuthService authService, List<Student> studenter, List<Ansatt> ansatte)
     {
         _authService = authService;
@@ -23,6 +36,11 @@ public class AuthFlow
         _ansatteById = ByggAnsattIndeks(_ansatte);
     }
 
+    /// <summary>
+    /// Forsøker å logge inn bruker med brukernavn og passord.
+    /// </summary>
+    /// <param name="account">Utparam: logget inn konto hvis vellykket, null ellers</param>
+    /// <returns>true hvis innlogging var vellykket</returns>
     public bool TryLogin(out UserAccount? account)
     {
         account = null;
@@ -42,6 +60,10 @@ public class AuthFlow
         return true;
     }
 
+    /// <summary>
+    /// Interaktiv flyt for å registrere ny bruker.
+    /// Spørrer om rolle (student, faglærer eller bibliotekansatt).
+    /// </summary>
     public void RegistrerNyBruker()
     {
         Console.WriteLine("\nVelg rolle for ny bruker:");
@@ -137,18 +159,33 @@ public class AuthFlow
         }
     }
 
+    /// <summary>
+    /// Finner en student basert på e-postkontoen.
+    /// </summary>
+    /// <param name="account">Brukerkontoen</param>
+    /// <returns>Student hvis funnet, null ellers</returns>
     public Student? FinnStudentForAccount(UserAccount account)
     {
         _studenterById.TryGetValue(account.ReferenceId, out var student);
         return student;
     }
 
+    /// <summary>
+    /// Finner en ansatt basert på brukerkontoen.
+    /// </summary>
+    /// <param name="account">Brukerkontoen</param>
+    /// <returns>Ansatt hvis funnet, null ellers</returns>
     public Ansatt? FinnAnsattForAccount(UserAccount account)
     {
         _ansatteById.TryGetValue(account.ReferenceId, out var ansatt);
         return ansatt;
     }
 
+    /// <summary>
+    /// Leser og validerer en gyldig e-postadresse fra konsolen.
+    /// Gjentar spørsmål hvis format er ugyldig.
+    /// </summary>
+    /// <returns>Gyldig e-postadresse</returns>
     private static string LesGyldigEpost()
     {
         while (true)
@@ -166,6 +203,10 @@ public class AuthFlow
         }
     }
 
+    /// <summary>
+    /// Bygger indeks (dictionary) over studenter for rask oppslag etter StudentID.
+    /// </summary>
+    /// <returns>Dictionary: StudentID -> Student</returns>
     private static Dictionary<string, Student> ByggStudentIndeks(IEnumerable<Student> studenter)
     {
         var indeks = new Dictionary<string, Student>(StringComparer.OrdinalIgnoreCase);
@@ -180,6 +221,10 @@ public class AuthFlow
         return indeks;
     }
 
+    /// <summary>
+    /// Bygger indeks (dictionary) over ansatte for rask oppslag etter AnsattID.
+    /// </summary>
+    /// <returns>Dictionary: AnsattID -> Ansatt</returns>
     private static Dictionary<string, Ansatt> ByggAnsattIndeks(IEnumerable<Ansatt> ansatte)
     {
         var indeks = new Dictionary<string, Ansatt>(StringComparer.OrdinalIgnoreCase);

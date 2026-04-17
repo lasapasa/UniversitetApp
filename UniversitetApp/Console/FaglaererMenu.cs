@@ -3,6 +3,10 @@ using UniversitetApp.Services;
 
 namespace UniversitetApp;
 
+/// <summary>
+/// Meny for faglærer-operasjoner.
+/// Tillater kursopprettelse, karaktersetting, pensum-registrering og bibliotekoperasjoner.
+/// </summary>
 public class FaglaererMenu
 {
     private readonly KursManager _kursManager;
@@ -11,6 +15,12 @@ public class FaglaererMenu
     private readonly Dictionary<string, Student> _studenterById = new(StringComparer.OrdinalIgnoreCase);
     private int _studentAntallVedSisteIndeks;
 
+    /// <summary>
+    /// Initialiserer en faglærermeny.
+    /// </summary>
+    /// <param name="kursManager">Manager for kursoperasjoner</param>
+    /// <param name="bibliotekManager">Manager for bibliotekoperasjoner</param>
+    /// <param name="studenter">Referanse til alle systemets studenter</param>
     public FaglaererMenu(KursManager kursManager, BibliotekManager bibliotekManager, List<Student> studenter)
     {
         _kursManager = kursManager;

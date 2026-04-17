@@ -3,8 +3,20 @@ using UniversitetApp.Services;
 
 namespace UniversitetApp;
 
+/// <summary>
+/// Initialiserer eksempeldata for applikasjonen ved første kjøring.
+/// Oppretter testbrukere, kurs, bøker og nogle låner.
+/// </summary>
 public static class SeedDataInitializer
 {
+    /// <summary>
+    /// Initialiserer systemer med eksempeldata.
+    /// </summary>
+    /// <param name="km">KursManager for å registrere kurs</param>
+    /// <param name="bm">BibliotekManager for å registrere bøker</param>
+    /// <param name="auth">AuthService for å registrere brukerkontoer</param>
+    /// <param name="studenter">Utdata: liste av opprettede studenter</param>
+    /// <param name="ansatte">Utdata: liste av opprettede ansatte</param>
     public static void Initialize(
         KursManager km,
         BibliotekManager bm,
